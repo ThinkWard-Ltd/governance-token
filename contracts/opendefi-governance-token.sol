@@ -13,7 +13,7 @@ The above copyright notice and this permission notice shall be included in all c
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * */
  
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.4;
 
 
 
@@ -128,10 +128,6 @@ abstract contract Context {
         return msg.sender;
     }
 
-    function _msgData() internal view virtual returns (bytes calldata) {
-        this; // silence state mutability warning without generating bytecode - see https://github.com/ethereum/solidity/issues/2691
-        return msg.data;
-    }
 }
 
 /**
@@ -369,29 +365,6 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
         emit Transfer(address(0), account, amount);
     }
 
-    /**
-     * @dev Destroys `amount` tokens from `account`, reducing the
-     * total supply.
-     *
-     * Emits a {Transfer} event with `to` set to the zero address.
-     *
-     * Requirements:
-     *
-     * - `account` cannot be the zero address.
-     * - `account` must have at least `amount` tokens.
-     */
-    function _burn(address account, uint256 amount) internal virtual {
-        require(account != address(0), "ERC20: burn from the zero address");
-
-        _beforeTokenTransfer(account, address(0), amount);
-
-        uint256 accountBalance = _balances[account];
-        require(accountBalance >= amount, "ERC20: burn amount exceeds balance");
-        _balances[account] = accountBalance - amount;
-        _totalSupply -= amount;
-
-        emit Transfer(account, address(0), amount);
-    }
 
     /**
      * @dev Sets `amount` as the allowance of `spender` over the `owner` s tokens.
@@ -434,67 +407,6 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
 
 contract OpenDeFiGovernance is ERC20 {
 
-    string private constant ERROR_ADD_OVERFLOW = "MATH_ADD_OVERFLOW";
-    string private constant ERROR_SUB_UNDERFLOW = "MATH_SUB_UNDERFLOW";
-    string private constant ERROR_MUL_OVERFLOW = "MATH_MUL_OVERFLOW";
-    string private constant ERROR_DIV_ZERO = "MATH_DIV_ZERO";
-
-    /**
-    * @dev Multiplies two numbers, reverts on overflow.
-    */
-    function mul(uint256 _a, uint256 _b) internal pure returns (uint256) {
-        // Gas optimization: this is cheaper than requiring 'a' not being zero, but the
-        // benefit is lost if 'b' is also tested.
-        // See: https://github.com/OpenZeppelin/openzeppelin-solidity/pull/522
-        if (_a == 0) {
-            return 0;
-        }
-
-        uint256 c = _a * _b;
-        require(c / _a == _b, ERROR_MUL_OVERFLOW);
-
-        return c;
-    }
-
-    /**
-    * @dev Integer division of two numbers truncating the quotient, reverts on division by zero.
-    */
-    function div(uint256 _a, uint256 _b) internal pure returns (uint256) {
-        require(_b > 0, ERROR_DIV_ZERO); // Solidity only automatically asserts when dividing by 0
-        uint256 c = _a / _b;
-        // assert(_a == _b * c + _a % _b); // There is no case in which this doesn't hold
-
-        return c;
-    }
-
-    /**
-    * @dev Subtracts two numbers, reverts on overflow (i.e. if subtrahend is greater than minuend).
-    */
-    function sub(uint256 _a, uint256 _b) internal pure returns (uint256) {
-        require(_b <= _a, ERROR_SUB_UNDERFLOW);
-        uint256 c = _a - _b;
-
-        return c;
-    }
-
-    /**
-    * @dev Adds two numbers, reverts on overflow.
-    */
-    function add(uint256 _a, uint256 _b) internal pure returns (uint256) {
-        uint256 c = _a + _b;
-        require(c >= _a, ERROR_ADD_OVERFLOW);
-
-        return c;
-    }
-
-    /**
-    * @dev Divides two numbers and returns the remainder (unsigned integer modulo),
-    * reverts when dividing by zero.
-    */
-    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
-        require(b != 0, ERROR_DIV_ZERO);
-        return a % b;
-    }
 
     constructor(string memory name_, string memory symbol_, uint256 amount_, address deployer_) ERC20(name_, symbol_){
         _mint(deployer_, amount_);
@@ -517,7 +429,7 @@ contract OpenDeFiGovernance is ERC20 {
     mapping (address => uint256) public unlockedPerEpoch; // the number of tokens unlocked per unlockEpoch
     mapping (address => uint256) public baseTokensLocked; // the number of tokens locked up by HOLDER
     /**
-     * @dev Emitted when the token lock changes including initiating a new lock or updating an existing lock to be more strict
+     * @dev Emitted when the token lock is initialized  
      * `tokenHolder` is the address the lock pertains to
      *  `amountLocked` is the amount of tokens locked 
      *  `time` is the (initial) time at which tokens were locked
@@ -525,13 +437,21 @@ contract OpenDeFiGovernance is ERC20 {
      *  `unlockedPerPeriod` is the amount of token unlocked earch unlockPeriod
      */
     event  NewTokenLock(address tokenHolder, uint256 amountLocked, uint256 time, uint256 unlockPeriod, uint256 unlockedPerPeriod);
-    
+    /**
+     * @dev Emitted when the token lock is updated  to be more strict
+     * `tokenHolder` is the address the lock pertains to
+     *  `amountLocked` is the amount of tokens locked 
+     *  `time` is the (initial) time at which tokens were locked
+     *  `unlockPeriod` is the time interval at which tokens become unlockedPerPeriod
+     *  `unlockedPerPeriod` is the amount of token unlocked earch unlockPeriod
+     */
+    event  UpdateTokenLock(address tokenHolder, uint256 amountLocked, uint256 time, uint256 unlockPeriod, uint256 unlockedPerPeriod);
     /**
      * @dev require that at least `amount` tokens are unlocked before transfer is possible
      *  also permit if minting tokens (coming from 0x0)
      *
     */
-    function _beforeTokenTransfer(address from, address to, uint256 amount) internal  virtual override {
+    function _beforeTokenTransfer(address from, address /*to*/, uint256 amount) internal  virtual override {
             require(from == address(0x0) || amount <= balanceUnlocked(from), ERROR_INSUFFICIENT_UNLOCKED);
     }
     
@@ -583,7 +503,7 @@ contract OpenDeFiGovernance is ERC20 {
      */
     function balanceUnlocked(address who) public view returns (uint256 amount) {
         
-        return sub(balanceOf(who), balanceLocked(who));
+        return (balanceOf(who)- balanceLocked(who));
         
     }
     /**
@@ -594,74 +514,93 @@ contract OpenDeFiGovernance is ERC20 {
         if(baseTokensLocked[who] == 0){
             return 0;
         }
-        //unlockedOverTime = unlockedPerEpoch[who]*((block.timestamp - lockTime[who]) / unlockEpoch[who])
-        uint256 unlockedOverTime = mul(unlockedPerEpoch[who] , (div( sub(block.timestamp, lockTime[who]) , unlockEpoch[who])));
+        uint256 unlockedOverTime = unlockedPerEpoch[who] * (block.timestamp - lockTime[who]) / unlockEpoch[who];
         if(baseTokensLocked[who] <  unlockedOverTime){
             return 0;
         }
-        return sub(baseTokensLocked[who], unlockedOverTime);
+        return baseTokensLocked[who]- unlockedOverTime;
         
     }
+
+     /**
+     * @dev Emits UpdateTokenLock event
+     */
+    function emitUpdateTokenLock() private {
+        emit UpdateTokenLock(msg.sender, baseTokensLocked[msg.sender], lockTime[msg.sender], unlockEpoch[msg.sender], unlockedPerEpoch[msg.sender]);
+
+    }
+ 
+
     /**
-     * @dev Reduce the amount of token unlocked each period to `newAmount`
+     * @dev Reduce the amount of token unlocked each period by `subtractedValue`
      * 
-     * Emits an {NewTokenLock} event indicating the updated terms of the token lockup.
+     * Emits an {UpdateTokenLock} event indicating the updated terms of the token lockup.
      * 
      * Requires: 
-     *  - There Must be tokens currently locked
-     *  - `newAmount` is less than the current amount
+     *  - msg.sender must have tokens currently locked
+     *  - `subtractedValue` is greater than 0
+     *  - cannot reduce the unlockedPerEpoch to 0
      *
+     *  NOTE: As a side effect resets the baseTokensLocked and lockTime for msg.sender 
      */
-    function reduceUnlockAmountTo(uint256 newAmount) public {
-        require(newAmount < unlockedPerEpoch[msg.sender], ERROR_BAD_NEW_UNLOCK_AMT);
+    function decreaseUnlockAmount(uint256 subtractedValue) public {
         require(balanceLocked(msg.sender) > 0, ERROR_NO_LOCKED_TOKENS);
+        require(subtractedValue > 0 && (unlockedPerEpoch[msg.sender]- subtractedValue) > 0, ERROR_BAD_NEW_UNLOCK_AMT);
+
+        baseTokensLocked[msg.sender] = balanceLocked(msg.sender);
+        lockTime[msg.sender] = block.timestamp;
     
-        unlockedPerEpoch[msg.sender] = newAmount;
-        emit NewTokenLock(msg.sender, baseTokensLocked[msg.sender], lockTime[msg.sender], unlockEpoch[msg.sender], unlockedPerEpoch[msg.sender]);
+        unlockedPerEpoch[msg.sender] = (unlockedPerEpoch[msg.sender]- subtractedValue);
+        emitUpdateTokenLock();
     
     }
     /**
-     * @dev Increase the duration of the period at which tokens are unlocked to `newTime`
+     * @dev Increase the duration of the period at which tokens are unlocked by `addedTime`
      * this will have the net effect of slowing the rate at which tokens are unlocked
      * 
-     * Emits an {NewTokenLock} event indicating the updated terms of the token lockup.
+     * Emits an {UpdateTokenLock} event indicating the updated terms of the token lockup.
      * 
      * Requires: 
-     *  - There Must be tokens currently locked
-     *  - `newTime` is greater than the current period
-     *
+     *  - msg.sender must have tokens currently locked
+     *  - `addedTime` is greater than 0
+     * 
+     *  NOTE: As a side effect resets the baseTokensLocked and lockTime for msg.sender 
      */
-    function increaseUnlockTime(uint256 newTime) public {
-        require(newTime > unlockEpoch[msg.sender], ERROR_BAD_NEW_UNLOCK_TIME);
+    function increaseUnlockTime(uint256 addedValue) public {
+        require(addedValue > 0, ERROR_BAD_NEW_UNLOCK_TIME);
         require(balanceLocked(msg.sender) > 0, ERROR_NO_LOCKED_TOKENS);
+
+        baseTokensLocked[msg.sender] = balanceLocked(msg.sender);
+        lockTime[msg.sender] = block.timestamp;
     
-        unlockEpoch[msg.sender] = newTime;
-        emit NewTokenLock(msg.sender, baseTokensLocked[msg.sender], lockTime[msg.sender], unlockEpoch[msg.sender], unlockedPerEpoch[msg.sender]);
+        unlockEpoch[msg.sender] = (addedValue+ unlockEpoch[msg.sender]);
+
+        emitUpdateTokenLock();
     
     }
     /**
-     * @dev Increase the number of tokens locked by `newAmount`
+     * @dev Increase the number of tokens locked by `addedValue`
      * i.e. locks up more tokens.
      * 
      *      
-     * Emits an {NewTokenLock} event indicating the updated terms of the token lockup.
+     * Emits an {UpdateTokenLock} event indicating the updated terms of the token lockup.
      * 
      * Requires: 
-     *  - There Must be tokens currently locked
+     *  - msg.sender must have tokens currently locked
      *  - `newAmount` is greater than zero
-     *  - there Must be sufficient unlocked tokens to lock
+     *  - msg.sender must have sufficient unlocked tokens to lock
      * 
-     * Note: Will reset the countdown to the next token unlock epoch
+     * Note: Will set the time the tokens were locked to block.timestamp
      *
      */
-    function increaseTokensLocked(uint256 newAmount) public {
-        require(newAmount > 0, ERROR_BAD_NEW_LOCKED_AMT);
+    function increaseTokensLocked(uint256 addedValue) public {
+        require(addedValue > 0, ERROR_BAD_NEW_LOCKED_AMT);
         require(balanceLocked(msg.sender) > 0, ERROR_NO_LOCKED_TOKENS);
-        require(newAmount <= balanceUnlocked(msg.sender), ERROR_INSUFFICIENT_TOKENS);
-        //baseTokensLocked[msg.sender] = add(newAmount, baseTokensLocked[msg.sender]);
-        baseTokensLocked[msg.sender] = add(newAmount, balanceLocked(msg.sender));
+        require(addedValue <= balanceUnlocked(msg.sender), ERROR_INSUFFICIENT_TOKENS);
+        baseTokensLocked[msg.sender] = (addedValue+ balanceLocked(msg.sender));
         lockTime[msg.sender] = block.timestamp;
-        emit NewTokenLock(msg.sender, baseTokensLocked[msg.sender], lockTime[msg.sender], unlockEpoch[msg.sender], unlockedPerEpoch[msg.sender]);
+        emitUpdateTokenLock();
     }
+
 }
 

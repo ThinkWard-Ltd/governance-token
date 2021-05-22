@@ -1,5 +1,9 @@
 const OpenDeFiGovernance = artifacts.require("OpenDeFiGovernance");
 
+//https://github.com/ejwessel/GanacheTimeTraveler
+const helper = require('./utils.js');
+
+const initial_tokens = 10000
 /*
  * uncomment accounts to access the test accounts made available by the
  * Ethereum client
@@ -12,24 +16,20 @@ contract("OpenDeFiGovernance", function (accounts) {
     const tokenName = "OpenDeFiGovernanceTestingToken";
     const tokenSymbol = 'ODGTT'
     //const tokenDecimals = 1
+  beforeEach(async() => {
+      snapShot = await helper.takeSnapshot();
+      snapshotId = snapShot['result'];
+  });
+
+  afterEach(async() => {
+      await helper.revertToSnapShot(snapshotId);
+  });
     beforeEach(async () => {
-        token = await OpenDeFiGovernance.new(tokenName, "ODGTT", 10000, accounts[0]);
+        token = await OpenDeFiGovernance.new(tokenName, "ODGTT", initial_tokens, accounts[0]);
         // console.log(token.address)
     });
 
-    // it('Assigns initial balance', async () => {
-    //   let tokenBal = await token.balanceOf(wallet)
-    //   console.log(tokenBal)
-    //     expect(parseInt(tokenBal)).to.equal(1000);
-    // });
-
-    // it('Transfer adds amount to destination account', async () => {
-    //     await token.transfer(walletTo, 7);
-    //     let tokenBal = await token.balanceOf(walletTo)
-    //     expect(parseInt(tokenBal)).to.equal(7);
-    // });
-
-    it('creation: should create an initial balance of 10000 for the creator', async () => {
+    it('creation: should create an initial balance of ' + initial_tokens+' for the creator', async () => {
       const balance = await token.balanceOf.call(accounts[ 0 ])
       assert.strictEqual(balance.toNumber(), 10000)
     })
@@ -41,13 +41,21 @@ contract("OpenDeFiGovernance", function (accounts) {
       const symbol = await token.symbol.call()
       assert.strictEqual(symbol, tokenSymbol)
     })
+
+    it('creation: test correct setting of decimals', async () => {
+      const decimals = await token.decimals.call()
+      assert.strictEqual(decimals.toNumber(), 18)
+    })
+
+    it('creation: test correct setting of totalSupply', async () => {
+      const totalSupply = await token.totalSupply.call()
+      assert.equal(totalSupply.toNumber(), 10000)
+    })
   
     // TRANSERS
     // normal transfers without approvals
     it('transfers: ether transfer should be reversed.', async () => {
-      const balanceBefore = await token.balanceOf.call(accounts[ 0 ])
-      assert.strictEqual(balanceBefore.toNumber(), 10000)
-  
+      
       let threw = false
       try {
         await web3.eth.sendTransaction({ from: accounts[ 0 ], to: token.address, value: web3.utils.toWei('10', 'Ether') })
@@ -55,15 +63,19 @@ contract("OpenDeFiGovernance", function (accounts) {
         threw = true
       }
       assert.equal(threw, true)
-  
-      const balanceAfter = await token.balanceOf.call(accounts[ 0 ])
-      assert.strictEqual(balanceAfter.toNumber(), 10000)
     })
   
-    it('transfers: should transfer 10000 to accounts[1] with accounts[0] having 10000', async () => {
+    it('transfers: should transfer 10000 to accounts[1] with accounts[0] having 0 afterwards', async () => {
       await token.transfer(accounts[ 1 ], 10000, { from: accounts[ 0 ] })
       const balance = await token.balanceOf.call(accounts[ 1 ])
       assert.strictEqual(balance.toNumber(), 10000)
+      //console.log ("balance of A1 after transfer " + balance.toNumber())
+
+      const balance0 = await token.balanceOf.call(accounts[ 0 ])
+      assert.strictEqual(balance0.toNumber(), 0)
+      //console.log ("balance of A0 after transfer " + balance0.toNumber())
+
+
     })
   
     it('transfers: should fail when trying to transfer 10001 to accounts[1] with accounts[0] having 10000', async () => {
@@ -220,6 +232,93 @@ contract("OpenDeFiGovernance", function (accounts) {
       //console.log(balance02.toNumber())
       assert.strictEqual(balance02.toNumber(), 9980)
     })
+
+    it('approvals: increaseAllowance increases the number of approved tokens', async () => {
+      await token.approve(accounts[ 1 ], 100, { from: accounts[ 0 ] })
+      await token.increaseAllowance(accounts[ 1 ], 60, { from: accounts[ 0 ] })
+
+      await token.transferFrom(accounts[ 0 ], accounts[ 2 ], 160, { from: accounts[ 1 ] })
+      const balance2 = await token.balanceOf.call(accounts[ 2 ])
+      assert.strictEqual(balance2.toNumber(), 160, 'balance of account 2 not correct')
+
+    })
+
+    it('approvals: decreaseAllowance decreases the number of approved tokens', async () => {
+      await token.approve(accounts[ 1 ], 100, { from: accounts[ 0 ] })
+      await token.decreaseAllowance(accounts[ 1 ], 60, { from: accounts[ 0 ] })
+
+      await token.transferFrom(accounts[ 0 ], accounts[ 2 ], 30, { from: accounts[ 1 ] })
+      const balance2 = await token.balanceOf.call(accounts[ 2 ])
+      assert.strictEqual(balance2.toNumber(), 30, 'balance of account 2 not correct')
+
+      let threw = false
+      try {
+        await token.transferFrom(accounts[ 0 ], accounts[ 2 ], 20, { from: accounts[ 1 ] })
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "was allowed to transfer too many tokens after decreaseAllowance")
+    })
+
+    it('approvals: decreaseAllowance prevents subtractedValue from being greater than current allowance ', async () => {
+      await token.approve(accounts[ 1 ], 100, { from: accounts[ 0 ] })
+      
+      let threw = false
+      try {
+        await token.decreaseAllowance(accounts[ 1 ], 101, { from: accounts[ 0 ] })
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "was allowed to subtract too much from decreaseAllowance")
+    })
+
+    it('approvals: cannot approve 0x0 as a spender ', async () => {
+      
+      let threw = false
+      try {
+        await token.approve('0x0000000000000000000000000000000000000000', 100, { from: accounts[ 0 ] })
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "was allowed to approve 0x0 as a spender")
+    })
+
+    it('transferFrom: _transfer from zero address not allowed.', async () => {
+      await token.approve(accounts[ 1 ], 100, { from: accounts[ 0 ] })
+      let threw = false
+      try {
+        await token.transferFrom.call('0x0000000000000000000000000000000000000000', accounts[ 2 ], 20, { from: accounts[ 1 ] })
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "was allowed to _transfer from zero address")
+      
+    })
+
+    it('transferFrom: _transfer to zero address not allowed.', async () => {
+      await token.approve(accounts[ 1 ], 100, { from: accounts[ 0 ] })
+      let threw = false
+      try {
+        await token.transferFrom.call(accounts[ 2 ], '0x0000000000000000000000000000000000000000',  20, { from: accounts[ 1 ] })
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "was allowed to _transfer to zero address")
+      
+    })
+
+    it('transferFrom: _transfer can not exceed balance of sender address.', async () => {
+      await token.approve(accounts[ 1 ], 100, { from: accounts[ 0 ] })
+
+      let threw = false
+      try {
+        await token.transferFrom.call(accounts[ 2 ], accounts[ 0 ],  20, { from: accounts[ 1 ] })
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "was allowed to _transfer more than sender's balance")
+      
+    })
   
     /* eslint-disable no-underscore-dangle */
     it('events: should fire Transfer event properly', async () => {
@@ -252,4 +351,398 @@ contract("OpenDeFiGovernance", function (accounts) {
       assert.strictEqual(approvalLog.args.spender, accounts[ 1 ])
       assert.strictEqual(approvalLog.args.value.toString(), '2666')
     })
+
+    it('Locking: Tokens Can be Locked', async () => {
+      
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+      const lockedAmount = await token.baseTokensLocked.call(accounts[ 0 ])
+      assert.strictEqual(lockedAmount.toNumber(), 5000)
+
+      const unlockEpoch = await token.unlockEpoch.call(accounts[ 0 ])
+      assert.strictEqual(unlockEpoch.toNumber(), 1000)
+
+      const unlockedPerEpoch = await token.unlockedPerEpoch.call(accounts[ 0 ])
+      assert.strictEqual(unlockedPerEpoch.toNumber(), 500)
+
+      blockNum = await web3.eth.getBlockNumber()
+      block = await web3.eth.getBlock(blockNum)
+      const timestamp = block.timestamp
+
+      const lockTime = await token.lockTime.call(accounts[ 0 ])
+      assert.strictEqual(lockTime.toNumber(), timestamp)
+    })
+
+    it('Locking: Partial unlocking between unlockEpochs', async () => {
+      
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+      
+      await helper.advanceTimeAndBlock(250)
+      const balanceUnlocked = await token.balanceUnlocked.call(accounts[ 0 ])
+      assert.strictEqual(balanceUnlocked.toNumber(), 5125)
+      
+    })
+
+    it('Locking: Cannot create new lock while one exists', async () => {
+      let threw = false
+      try {
+        await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+        //should fail on the second one!
+        await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true)
+    })
+
+    it('Locking: Account must have enough tokens to lock', async () => {
+      let threw = false
+      try {
+        await token.newTokenLock('10001', 1000, 500, { from: accounts[ 0 ] })
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true)    
+    })
+
+    it('Locking: Token Unlock Epoch must be greater than zero', async () => {
+      let threw = false
+      try {
+        await token.newTokenLock('5000', 0, 500, { from: accounts[ 0 ] })
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true)    
+    })
+
+    it('Locking: Amount unlocked per epoch is less than amount locked ', async () => {
+      let threw = false
+      try {
+        await token.newTokenLock('5000', 1000, 5001, { from: accounts[ 0 ] })
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true)    
+    })
+
+    it('Locking: Amount unlocked per epoch is greater than zero', async () => {
+      let threw = false
+      try {
+        await token.newTokenLock('5000', 1000, 0, { from: accounts[ 0 ] })
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true)    
+    })
+    it('Locking: Computes correct tokens locked for Account that has never locked tokens', async () => {
+
+
+      const lockedAmount = await token.balanceLocked.call(accounts[ 0 ])
+      assert.strictEqual(lockedAmount.toNumber(), 0)
+    })
+
+    it('Locking: Computes correct tokens unlocked for Account that has never locked tokens', async () => {
+      const balanceUnlocked = await token.balanceUnlocked.call(accounts[ 0 ])
+
+      assert.strictEqual(balanceUnlocked.toNumber(), 10000)
+    })
+
+    it('Locking: Computes correct tokens locked over time', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await helper.advanceTimeAndBlock(1000)
+
+      const balanceLocked = await token.balanceLocked.call(accounts[ 0 ])
+
+      assert.strictEqual(balanceLocked.toNumber(), 4500)
+
+      await helper.advanceTimeAndBlock(9000)
+
+      const balanceLocked1 = await token.balanceLocked.call(accounts[ 0 ])
+
+      assert.strictEqual(balanceLocked1.toNumber(), 0)
+
+      await helper.advanceTimeAndBlock(2000)
+
+      const balanceLocked2 = await token.balanceLocked.call(accounts[ 0 ])
+
+      assert.strictEqual(balanceLocked2.toNumber(), 0)
+
+    })
+
+    it('Locking: Computes correct tokens un-locked over time', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await helper.advanceTimeAndBlock(1000)
+
+      const balanceUnlocked = await token.balanceUnlocked.call(accounts[ 0 ])
+
+      assert.strictEqual(balanceUnlocked.toNumber(), 5500)
+
+      await helper.advanceTimeAndBlock(9000)
+
+      const balanceUnlocked1 = await token.balanceUnlocked.call(accounts[ 0 ])
+
+      assert.strictEqual(balanceUnlocked1.toNumber(), 10000)
+
+    })
+
+    it('Locking: unlocked tokens can be transferred', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await token.transfer(accounts[ 1 ], 5000, { from: accounts[ 0 ] })
+      const balance1 = await token.balanceOf.call(accounts[ 1 ])
+      assert.strictEqual(5000, balance1.toNumber(), "failed to send unlocked tokens (5000)") 
+
+      await helper.advanceTimeAndBlock(1000)
+
+      await token.transfer(accounts[ 1 ], 500, { from: accounts[ 0 ] }) 
+
+      const balance2 = await token.balanceOf.call(accounts[ 1 ])
+      assert.strictEqual(5500, balance2.toNumber(), 'failed to send unlocked tokens(500)') 
+    })
+
+    it('Locking: locked tokens cannot be transferred', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      let threw = false
+      try {
+        await token.transfer(accounts[ 1 ], 5001, { from: accounts[ 0 ] })
+
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "ERROR: locked tokens were sent.. somehow!")    
+
+      await token.transfer(accounts[ 1 ], 5000, { from: accounts[ 0 ] })
+      const balanceUnlocked = await token.balanceUnlocked.call(accounts[ 0 ])
+
+      let threw2 = false
+      try {
+        await token.transfer(accounts[ 1 ], 1, { from: accounts[ 0 ] })
+
+      } catch (e) {
+        threw2 = true
+      }
+      assert.equal(threw2, true, "was able to send a locked token")    
+    })
+
+    it('Locking: expired timelocks can be cleared', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await helper.advanceTimeAndBlock(10000)
+
+      await token.clearLock()
+
+      const lockedAmount = await token.baseTokensLocked.call(accounts[ 0 ])
+      assert.strictEqual(lockedAmount.toNumber(), 0)
+
+      const unlockEpoch = await token.unlockEpoch.call(accounts[ 0 ])
+      assert.strictEqual(unlockEpoch.toNumber(), 0)
+
+      const unlockedPerEpoch = await token.unlockedPerEpoch.call(accounts[ 0 ])
+      assert.strictEqual(unlockedPerEpoch.toNumber(), 0)
+
+      const lockTime2 = await token.lockTime.call(accounts[ 0 ])
+      assert.strictEqual(lockTime2.toNumber(), 0)
+
+    })
+
+    it('Locking: clearing timelock fails if tokens are locked', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await helper.advanceTimeAndBlock(9500)
+
+      let threw = false
+      try {
+        await token.clearLock()
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "ERROR: cleared an active lock")    
+    })
+
+    
+    it('Locking: reduce tokens unlocked each epoch by amount', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await helper.advanceTimeAndBlock(1000)
+
+      await token.decreaseUnlockAmount(499)
+      
+      await helper.advanceTimeAndBlock(1000)
+
+      const balanceUnlocked = await token.balanceUnlocked.call(accounts[ 0 ])
+      assert.strictEqual(balanceUnlocked.toNumber(), 5501)
+
+    })
+
+    it('Locking: reducing tokens unlocked each epoch possible only if tokens locked', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await helper.advanceTimeAndBlock(10000)
+
+      let threw = false
+      try {
+        await token.decreaseUnlockAmount(499)
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "ERROR: reducing tokens unlocked each epoch possible without tokens locked")    
+
+    })
+
+    it('Locking: tokens unlocked amount cannot be reduced *by* zero', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await helper.advanceTimeAndBlock(1000)
+
+      let threw = false
+      try {
+        await token.decreaseUnlockAmount(0)
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "ERROR: zero amount was permitted")    
+
+    })
+
+    it('Locking: tokens unlocked amount cannot be reduced *to* zero', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await helper.advanceTimeAndBlock(1000)
+
+      let threw = false
+      try {
+        await token.decreaseUnlockAmount(500)
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "ERROR: zero amount was permitted")    
+
+    })
+
+    it('Locking: token unlock period can be increased', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await helper.advanceTimeAndBlock(1000)
+
+      await token.increaseUnlockTime(1000)
+      
+      await helper.advanceTimeAndBlock(1000)
+
+      const balanceUnlocked = await token.balanceUnlocked.call(accounts[ 0 ])
+      assert.strictEqual(balanceUnlocked.toNumber(), 5750, "time interval doubled, half the tokens should have unlocked this epoch")
+
+      await helper.advanceTimeAndBlock(1000)
+
+      const balanceUnlocked2 = await token.balanceUnlocked.call(accounts[ 0 ])
+      assert.strictEqual(balanceUnlocked2.toNumber(), 6000)
+    })
+
+    it('Locking: increasing unlock period possible only if tokens are locked', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await helper.advanceTimeAndBlock(10000)
+
+      let threw = false
+      try {
+        await token.increaseUnlockTime(1000)
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "ERROR: increasing unlocked period possible without tokens locked")    
+
+    })
+
+    it('Locking: unlock period cannot be increased *by* zero', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await helper.advanceTimeAndBlock(1000)
+
+      let threw = false
+      try {
+        await token.increaseUnlockTime(0)
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "ERROR: zero amount was permitted")    
+
+    })
+
+    it('Locking: lock up more tokens by specified addedValue', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await helper.advanceTimeAndBlock(1000)
+
+      await token.increaseTokensLocked(1000)
+
+      const balanceUnlocked = await token.balanceUnlocked.call(accounts[ 0 ])
+      assert.strictEqual(balanceUnlocked.toNumber(), 4500)
+      
+      await helper.advanceTimeAndBlock(1000)
+
+      const balanceUnlocked1 = await token.balanceUnlocked.call(accounts[ 0 ])
+      assert.strictEqual(balanceUnlocked1.toNumber(), 5000)
+
+    })
+
+    it('Locking: increasing tokens locked possible only if tokens are already locked', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await helper.advanceTimeAndBlock(10000)
+
+      let threw = false
+      try {
+        await token.increaseTokensLocked(1000)
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "ERROR: increasing tokens locked each epoch possible without tokens locked")    
+
+    })
+
+    it('Locking: cannot increase tokens locked *by* zero', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await helper.advanceTimeAndBlock(1000)
+
+      let threw = false
+      try {
+        await token.increaseTokensLocked(0)
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "ERROR: zero amount was permitted")    
+
+    })
+
+    it('Locking: when increasing the tokens locked there must be sufficient tokens', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      await helper.advanceTimeAndBlock(1000)
+
+      let threw = false
+      try {
+        await token.increaseTokensLocked(6000)
+      } catch (e) {
+        threw = true
+      }
+      assert.equal(threw, true, "ERROR: locking unavailable tokens was permitted")    
+
+    })
+
+
 });
+
+
+/**
+    
+     * - Emits an {UpdatedTokenLock} event indicating the updated terms of the token lockup.
+     * 
+     * 
+     * - Emits an {NewTokenLock} event indicating the updated terms of the token lockup.
+     *
+     * - Emits an {NewTokenLock} event indicating the updated terms of the token lockup.: 
+    
+    
+     */
