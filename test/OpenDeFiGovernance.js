@@ -731,18 +731,74 @@ contract("OpenDeFiGovernance", function (accounts) {
 
     })
 
+    it('Locking-events: should fire NewTokenLock event upon new lock', async () => {
+      const res = await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+      const log = res.logs.find(
+        element => element.event.match('NewTokenLock') &&
+          element.address.match(token.address)
+      )
+      const lockTime = await token.lockTime.call(accounts[ 0 ])
+
+      assert.strictEqual(log.args.tokenHolder, accounts[ 0 ]), 'address does not match'
+      assert.strictEqual(log.args.amountLocked.toString(), '5000', 'amount locked does not match')
+      assert.strictEqual(log.args.time.toString(), lockTime.toString(), 'lockTime does not match')
+      assert.strictEqual(log.args.unlockPeriod.toString(), '1000', 'unlockPeriod does not match')
+      assert.strictEqual(log.args.unlockedPerPeriod.toString(), '500', 'unlockedPerPeriod does not match')
+    })
+
+    it('Locking-events: should fire UpdateTokenLock event upon decreaseUnlockAmount', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      const res = await token.decreaseUnlockAmount(499)
+
+      const lockTime = await token.lockTime.call(accounts[ 0 ])
+
+      const log = res.logs.find(
+        element => element.event.match('UpdateTokenLock') &&
+          element.address.match(token.address)
+      )
+      assert.strictEqual(log.args.tokenHolder, accounts[ 0 ]), 'address does not match'
+      assert.strictEqual(log.args.amountLocked.toString(), '5000', 'amount locked does not match')
+      assert.strictEqual(log.args.time.toString(), lockTime.toString(), 'lockTime does not match')
+      assert.strictEqual(log.args.unlockPeriod.toString(), '1000', 'unlockPeriod does not match')
+      assert.strictEqual(log.args.unlockedPerPeriod.toString(), '1', 'unlockedPerPeriod does not match')
+    })
+
+    it('Locking-events: should fire UpdateTokenLock event upon increaseUnlockTime', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      const res = await token.increaseUnlockTime(1)
+
+      const lockTime = await token.lockTime.call(accounts[ 0 ])
+
+      const log = res.logs.find(
+        element => element.event.match('UpdateTokenLock') &&
+          element.address.match(token.address)
+      )
+      assert.strictEqual(log.args.tokenHolder, accounts[ 0 ]), 'address does not match'
+      assert.strictEqual(log.args.amountLocked.toString(), '5000', 'amount locked does not match')
+      assert.strictEqual(log.args.time.toString(), lockTime.toString(), 'lockTime does not match')
+      assert.strictEqual(log.args.unlockPeriod.toString(), '1001', 'unlockPeriod does not match')
+      assert.strictEqual(log.args.unlockedPerPeriod.toString(), '500', 'unlockedPerPeriod does not match')    
+    })
+
+    it('Locking-events: should fire UpdateTokenLock event upon increaseTokensLocked', async () => {
+      await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      const res = await token.increaseTokensLocked(1)
+
+      const lockTime = await token.lockTime.call(accounts[ 0 ])
+
+      const log = res.logs.find(
+        element => element.event.match('UpdateTokenLock') &&
+          element.address.match(token.address)
+      )
+      assert.strictEqual(log.args.tokenHolder, accounts[ 0 ]), 'address does not match'
+      assert.strictEqual(log.args.amountLocked.toString(), '5001', 'amount locked does not match')
+      assert.strictEqual(log.args.time.toString(), lockTime.toString(), 'lockTime does not match')
+      assert.strictEqual(log.args.unlockPeriod.toString(), '1000', 'unlockPeriod does not match')
+      assert.strictEqual(log.args.unlockedPerPeriod.toString(), '500', 'unlockedPerPeriod does not match')
+     })
+
 
 });
-
-
-/**
-    
-     * - Emits an {UpdatedTokenLock} event indicating the updated terms of the token lockup.
-     * 
-     * 
-     * - Emits an {NewTokenLock} event indicating the updated terms of the token lockup.
-     *
-     * - Emits an {NewTokenLock} event indicating the updated terms of the token lockup.: 
-    
-    
-     */

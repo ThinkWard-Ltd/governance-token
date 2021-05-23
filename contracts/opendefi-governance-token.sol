@@ -461,9 +461,9 @@ contract OpenDeFiGovernance is ERC20 {
      *
      * Emits an {NewTokenLock} event indicating the updated terms of the token lockup.
      *
-     * Requirements:
+     * Requires msg.sender to:
      *
-     * - Must not be a prevoius lock for this address. If so, it must be cleared with a call to {clearLock}.
+     * - Must not be a prevoius lock for this address. If so, it must be first cleared with a call to {clearLock}.
      * - Must have at least a balance of `baseTokensLocked_` to lock
      * - Must provide non-zero `unlockEpoch_`
      * - Must have at least `unlockedPerEpoch_` tokens to unlock 
@@ -487,7 +487,7 @@ contract OpenDeFiGovernance is ERC20 {
      *
      * Requirements:
      *
-     * - Must not have any tokens locked, currently
+     * - msg.sender must not have any tokens locked, currently
      */
     function clearLock() public {
         require(balanceLocked(msg.sender) == 0, ERROR_CLEARING_LOCK);
@@ -523,7 +523,7 @@ contract OpenDeFiGovernance is ERC20 {
     }
 
      /**
-     * @dev Emits UpdateTokenLock event
+     * @dev Emits the UpdateTokenLock event
      */
     function emitUpdateTokenLock() private {
         emit UpdateTokenLock(msg.sender, baseTokensLocked[msg.sender], lockTime[msg.sender], unlockEpoch[msg.sender], unlockedPerEpoch[msg.sender]);
@@ -555,14 +555,14 @@ contract OpenDeFiGovernance is ERC20 {
     
     }
     /**
-     * @dev Increase the duration of the period at which tokens are unlocked by `addedTime`
+     * @dev Increase the duration of the period at which tokens are unlocked by `addedValue`
      * this will have the net effect of slowing the rate at which tokens are unlocked
      * 
      * Emits an {UpdateTokenLock} event indicating the updated terms of the token lockup.
      * 
      * Requires: 
      *  - msg.sender must have tokens currently locked
-     *  - `addedTime` is greater than 0
+     *  - `addedValue` is greater than 0
      * 
      *  NOTE: As a side effect resets the baseTokensLocked and lockTime for msg.sender 
      */
@@ -587,10 +587,10 @@ contract OpenDeFiGovernance is ERC20 {
      * 
      * Requires: 
      *  - msg.sender must have tokens currently locked
-     *  - `newAmount` is greater than zero
+     *  - `addedValue` is greater than zero
      *  - msg.sender must have sufficient unlocked tokens to lock
      * 
-     * Note: Will set the time the tokens were locked to block.timestamp
+     *  NOTE: As a side effect resets the baseTokensLocked and lockTime for msg.sender 
      *
      */
     function increaseTokensLocked(uint256 addedValue) public {
