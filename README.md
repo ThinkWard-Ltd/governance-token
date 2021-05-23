@@ -1,4 +1,4 @@
-# governance-token
+# Open DeFi Governance Token
 an ERC20 governance token with locking/staking features built in
 
 The token has fixed supply - no tokens can be burned, or minted after deployment
