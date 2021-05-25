@@ -15,8 +15,110 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
  
 pragma solidity ^0.8.4;
 
+/**
+* @dev Inteface for the token lock features in this contract
+*/
+interface ITOKENLOCK {
+    /**
+     * @dev Emitted when the token lock is initialized  
+     * `tokenHolder` is the address the lock pertains to
+     *  `amountLocked` is the amount of tokens locked 
+     *  `time` is the (initial) time at which tokens were locked
+     *  `unlockPeriod` is the time interval at which tokens become unlockedPerPeriod
+     *  `unlockedPerPeriod` is the amount of token unlocked earch unlockPeriod
+     */
+    event  NewTokenLock(address tokenHolder, uint256 amountLocked, uint256 time, uint256 unlockPeriod, uint256 unlockedPerPeriod);
+    /**
+     * @dev Emitted when the token lock is updated  to be more strict
+     * `tokenHolder` is the address the lock pertains to
+     *  `amountLocked` is the amount of tokens locked 
+     *  `time` is the (initial) time at which tokens were locked
+     *  `unlockPeriod` is the time interval at which tokens become unlockedPerPeriod
+     *  `unlockedPerPeriod` is the amount of token unlocked earch unlockPeriod
+     */
+    event  UpdateTokenLock(address tokenHolder, uint256 amountLocked, uint256 time, uint256 unlockPeriod, uint256 unlockedPerPeriod);
+    
+    /**
+     * @dev Lock `baseTokensLocked_` held by the caller with `unlockedPerEpoch_` tokens unlocking each `unlockEpoch_`
+     *
+     *
+     * Emits an {NewTokenLock} event indicating the updated terms of the token lockup.
+     *
+     * Requires msg.sender to:
+     *
+     * - Must not be a prevoius lock for this address. If so, it must be first cleared with a call to {clearLock}.
+     * - Must have at least a balance of `baseTokensLocked_` to lock
+     * - Must provide non-zero `unlockEpoch_`
+     * - Must have at least `unlockedPerEpoch_` tokens to unlock 
+     *  - `unlockedPerEpoch_` must be greater than zero
+     */
+    
+    function newTokenLock(uint256 baseTokensLocked_, uint256 unlockEpoch_, uint256 unlockedPerEpoch_) external;
+    
+    /**
+     * @dev Reset the lock state
+     *
+     * Requirements:
+     *
+     * - msg.sender must not have any tokens locked, currently
+     */
+    function clearLock() external;
+    
+    /**
+     * @dev Returns the amount of tokens that are unlocked i.e. transferrable by `who`
+     *
+     */
+    function balanceUnlocked(address who) external view returns (uint256 amount);
+    /**
+     * @dev Returns the amount of tokens that are locked and not transferrable by `who`
+     *
+     */
+    function balanceLocked(address who) external view returns (uint256 amount);
 
+    /**
+     * @dev Reduce the amount of token unlocked each period by `subtractedValue`
+     * 
+     * Emits an {UpdateTokenLock} event indicating the updated terms of the token lockup.
+     * 
+     * Requires: 
+     *  - msg.sender must have tokens currently locked
+     *  - `subtractedValue` is greater than 0
+     *  - cannot reduce the unlockedPerEpoch to 0
+     *
+     *  NOTE: As a side effect resets the baseTokensLocked and lockTime for msg.sender 
+     */
+    function decreaseUnlockAmount(uint256 subtractedValue) external;
+    /**
+     * @dev Increase the duration of the period at which tokens are unlocked by `addedValue`
+     * this will have the net effect of slowing the rate at which tokens are unlocked
+     * 
+     * Emits an {UpdateTokenLock} event indicating the updated terms of the token lockup.
+     * 
+     * Requires: 
+     *  - msg.sender must have tokens currently locked
+     *  - `addedValue` is greater than 0
+     * 
+     *  NOTE: As a side effect resets the baseTokensLocked and lockTime for msg.sender 
+     */
+    function increaseUnlockTime(uint256 addedValue) external;
+    /**
+     * @dev Increase the number of tokens locked by `addedValue`
+     * i.e. locks up more tokens.
+     * 
+     *      
+     * Emits an {UpdateTokenLock} event indicating the updated terms of the token lockup.
+     * 
+     * Requires: 
+     *  - msg.sender must have tokens currently locked
+     *  - `addedValue` is greater than zero
+     *  - msg.sender must have sufficient unlocked tokens to lock
+     * 
+     *  NOTE: As a side effect resets the baseTokensLocked and lockTime for msg.sender 
+     *
+     */
+    function increaseTokensLocked(uint256 addedValue) external;
 
+}
 /**
  * @dev Interface of the ERC20 standard as defined in the EIP.
  */
@@ -405,7 +507,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
 
 }
 
-contract OpenDeFiGovernance is ERC20 {
+contract OpenDeFiGovernance is ERC20, ITOKENLOCK {
 
 
     constructor(string memory name_, string memory symbol_, uint256 amount_, address deployer_) ERC20(name_, symbol_){
@@ -428,24 +530,6 @@ contract OpenDeFiGovernance is ERC20 {
     mapping (address => uint256) public unlockEpoch; //the time interval at which tokens unlock
     mapping (address => uint256) public unlockedPerEpoch; // the number of tokens unlocked per unlockEpoch
     mapping (address => uint256) public baseTokensLocked; // the number of tokens locked up by HOLDER
-    /**
-     * @dev Emitted when the token lock is initialized  
-     * `tokenHolder` is the address the lock pertains to
-     *  `amountLocked` is the amount of tokens locked 
-     *  `time` is the (initial) time at which tokens were locked
-     *  `unlockPeriod` is the time interval at which tokens become unlockedPerPeriod
-     *  `unlockedPerPeriod` is the amount of token unlocked earch unlockPeriod
-     */
-    event  NewTokenLock(address tokenHolder, uint256 amountLocked, uint256 time, uint256 unlockPeriod, uint256 unlockedPerPeriod);
-    /**
-     * @dev Emitted when the token lock is updated  to be more strict
-     * `tokenHolder` is the address the lock pertains to
-     *  `amountLocked` is the amount of tokens locked 
-     *  `time` is the (initial) time at which tokens were locked
-     *  `unlockPeriod` is the time interval at which tokens become unlockedPerPeriod
-     *  `unlockedPerPeriod` is the amount of token unlocked earch unlockPeriod
-     */
-    event  UpdateTokenLock(address tokenHolder, uint256 amountLocked, uint256 time, uint256 unlockPeriod, uint256 unlockedPerPeriod);
     /**
      * @dev require that at least `amount` tokens are unlocked before transfer is possible
      *  also permit if minting tokens (coming from 0x0)
@@ -470,7 +554,7 @@ contract OpenDeFiGovernance is ERC20 {
      *  - `unlockedPerEpoch_` must be greater than zero
      */
     
-    function newTokenLock(uint256 baseTokensLocked_, uint256 unlockEpoch_, uint256 unlockedPerEpoch_) public {
+    function newTokenLock(uint256 baseTokensLocked_, uint256 unlockEpoch_, uint256 unlockedPerEpoch_) public virtual override{
         require(balanceLocked(msg.sender) == 0, ERROR_LOCK_EXISTS);
         require(balanceOf(msg.sender) >= baseTokensLocked_, ERROR_INSUFFICIENT_TOKENS); 
         require(unlockEpoch_ > 0, ERROR_EPOCH_ZERO);
@@ -489,7 +573,7 @@ contract OpenDeFiGovernance is ERC20 {
      *
      * - msg.sender must not have any tokens locked, currently
      */
-    function clearLock() public {
+    function clearLock() public virtual override{
         require(balanceLocked(msg.sender) == 0, ERROR_CLEARING_LOCK);
         lockTime[msg.sender] = 0;
         unlockEpoch[msg.sender] = 0;
@@ -501,7 +585,7 @@ contract OpenDeFiGovernance is ERC20 {
      * @dev Returns the amount of tokens that are unlocked i.e. transferrable by `who`
      *
      */
-    function balanceUnlocked(address who) public view returns (uint256 amount) {
+    function balanceUnlocked(address who) public virtual override view returns (uint256 amount) {
         
         return (balanceOf(who)- balanceLocked(who));
         
@@ -510,7 +594,7 @@ contract OpenDeFiGovernance is ERC20 {
      * @dev Returns the amount of tokens that are locked and not transferrable by `who`
      *
      */
-    function balanceLocked(address who) public view returns (uint256 amount){
+    function balanceLocked(address who) public virtual override view returns (uint256 amount){
         if(baseTokensLocked[who] == 0){
             return 0;
         }
@@ -525,7 +609,7 @@ contract OpenDeFiGovernance is ERC20 {
      /**
      * @dev Emits the UpdateTokenLock event
      */
-    function emitUpdateTokenLock() private {
+    function emitUpdateTokenLock() internal {
         emit UpdateTokenLock(msg.sender, baseTokensLocked[msg.sender], lockTime[msg.sender], unlockEpoch[msg.sender], unlockedPerEpoch[msg.sender]);
 
     }
@@ -543,7 +627,7 @@ contract OpenDeFiGovernance is ERC20 {
      *
      *  NOTE: As a side effect resets the baseTokensLocked and lockTime for msg.sender 
      */
-    function decreaseUnlockAmount(uint256 subtractedValue) public {
+    function decreaseUnlockAmount(uint256 subtractedValue) public virtual override{
         require(balanceLocked(msg.sender) > 0, ERROR_NO_LOCKED_TOKENS);
         require(subtractedValue > 0 && (unlockedPerEpoch[msg.sender]- subtractedValue) > 0, ERROR_BAD_NEW_UNLOCK_AMT);
 
@@ -566,7 +650,7 @@ contract OpenDeFiGovernance is ERC20 {
      * 
      *  NOTE: As a side effect resets the baseTokensLocked and lockTime for msg.sender 
      */
-    function increaseUnlockTime(uint256 addedValue) public {
+    function increaseUnlockTime(uint256 addedValue) public virtual override{
         require(addedValue > 0, ERROR_BAD_NEW_UNLOCK_TIME);
         require(balanceLocked(msg.sender) > 0, ERROR_NO_LOCKED_TOKENS);
 
@@ -593,7 +677,7 @@ contract OpenDeFiGovernance is ERC20 {
      *  NOTE: As a side effect resets the baseTokensLocked and lockTime for msg.sender 
      *
      */
-    function increaseTokensLocked(uint256 addedValue) public {
+    function increaseTokensLocked(uint256 addedValue) public virtual override{
         require(addedValue > 0, ERROR_BAD_NEW_LOCKED_AMT);
         require(balanceLocked(msg.sender) > 0, ERROR_NO_LOCKED_TOKENS);
         require(addedValue <= balanceUnlocked(msg.sender), ERROR_INSUFFICIENT_TOKENS);
