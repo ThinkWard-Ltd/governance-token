@@ -4,6 +4,8 @@ const OpenDeFiGovernance = artifacts.require("OpenDeFiGovernance");
 const helper = require('./utils.js');
 
 const initial_tokens = 10000
+
+const verbose = false
 /*
  * uncomment accounts to access the test accounts made available by the
  * Ethereum client
@@ -22,7 +24,7 @@ contract("OpenDeFiGovernance", function (accounts) {
   });
 
   afterEach(async() => {
-      await helper.revertToSnapShot(snapshotId);
+      await helper.revertToSnapshot(snapshotId);
   });
     beforeEach(async () => {
         token = await OpenDeFiGovernance.new(tokenName, "ODGTT", initial_tokens, accounts[0]);
@@ -52,7 +54,7 @@ contract("OpenDeFiGovernance", function (accounts) {
       assert.equal(totalSupply.toNumber(), 10000)
     })
   
-    // TRANSERS
+    // TRANSFERS
     // normal transfers without approvals
     it('transfers: ether transfer should be reversed.', async () => {
       
@@ -353,6 +355,7 @@ contract("OpenDeFiGovernance", function (accounts) {
     })
 
     it('Locking: Tokens Can be Locked', async () => {
+
       
       await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
       const lockedAmount = await token.baseTokensLocked.call(accounts[ 0 ])
@@ -375,9 +378,24 @@ contract("OpenDeFiGovernance", function (accounts) {
     it('Locking: Partial unlocking between unlockEpochs', async () => {
       
       await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("lock created at block.timestamp " + timestamp.toString() + " according to contract " + lockTime.toString())
+      }
       
       await helper.advanceTimeAndBlock(250)
       const balanceUnlocked = await token.balanceUnlocked.call(accounts[ 0 ])
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        console.log("advanced time by 250; testing token.balanceUnlocked at time " + timestamp.toString())
+
+      }
       assert.strictEqual(balanceUnlocked.toNumber(), 5125)
       
     })
@@ -448,10 +466,24 @@ contract("OpenDeFiGovernance", function (accounts) {
 
     it('Locking: Computes correct tokens locked over time', async () => {
       await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("lock created at block.timestamp " + timestamp.toString() + " according to contract " + lockTime.toString())
+      }
 
       await helper.advanceTimeAndBlock(1000)
 
       const balanceLocked = await token.balanceLocked.call(accounts[ 0 ])
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        console.log("advanced time by 1000; testing token.balanceLocked at time " + timestamp.toString())
+      }
 
       assert.strictEqual(balanceLocked.toNumber(), 4500)
 
@@ -459,11 +491,25 @@ contract("OpenDeFiGovernance", function (accounts) {
 
       const balanceLocked1 = await token.balanceLocked.call(accounts[ 0 ])
 
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        console.log("advanced time by 9000; testing token.balanceLocked at time " + timestamp.toString())
+      }
+
       assert.strictEqual(balanceLocked1.toNumber(), 0)
 
       await helper.advanceTimeAndBlock(2000)
 
       const balanceLocked2 = await token.balanceLocked.call(accounts[ 0 ])
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        console.log("advanced time by 2000; testing token.balanceLocked at time " + timestamp.toString())
+      }
 
       assert.strictEqual(balanceLocked2.toNumber(), 0)
 
@@ -471,10 +517,24 @@ contract("OpenDeFiGovernance", function (accounts) {
 
     it('Locking: Computes correct tokens un-locked over time', async () => {
       await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("lock created at block.timestamp " + timestamp.toString() + " according to contract " + lockTime.toString())
+      }
 
       await helper.advanceTimeAndBlock(1000)
 
       const balanceUnlocked = await token.balanceUnlocked.call(accounts[ 0 ])
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        console.log("advanced time by 1000; testing token.balanceUnlocked at time " + timestamp.toString())
+      }
 
       assert.strictEqual(balanceUnlocked.toNumber(), 5500)
 
@@ -482,12 +542,26 @@ contract("OpenDeFiGovernance", function (accounts) {
 
       const balanceUnlocked1 = await token.balanceUnlocked.call(accounts[ 0 ])
 
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        console.log("advanced time by 9000; testing token.balanceUnlocked at time " + timestamp.toString())
+      }
+
       assert.strictEqual(balanceUnlocked1.toNumber(), 10000)
 
     })
 
     it('Locking: unlocked tokens can be transferred', async () => {
       await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("lock created at block.timestamp " + timestamp.toString() + " according to contract " + lockTime.toString())
+      }
 
       await token.transfer(accounts[ 1 ], 5000, { from: accounts[ 0 ] })
       const balance1 = await token.balanceOf.call(accounts[ 1 ])
@@ -495,14 +569,39 @@ contract("OpenDeFiGovernance", function (accounts) {
 
       await helper.advanceTimeAndBlock(1000)
 
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("advanced time by 1000; testing token.transfer at time " + timestamp.toString())
+      }
+
       await token.transfer(accounts[ 1 ], 500, { from: accounts[ 0 ] }) 
 
       const balance2 = await token.balanceOf.call(accounts[ 1 ])
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("after token.transfer(...); time is " + timestamp.toString())
+      }
+
       assert.strictEqual(5500, balance2.toNumber(), 'failed to send unlocked tokens(500)') 
     })
 
     it('Locking: locked tokens cannot be transferred', async () => {
       await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("lock created at block.timestamp " + timestamp.toString() + " according to contract " + lockTime.toString())
+      }
 
       let threw = false
       try {
@@ -511,10 +610,27 @@ contract("OpenDeFiGovernance", function (accounts) {
       } catch (e) {
         threw = true
       }
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("after failed(?) token.transfer(...); time is " + timestamp.toString())
+      }
+
       assert.equal(threw, true, "ERROR: locked tokens were sent.. somehow!")    
 
       await token.transfer(accounts[ 1 ], 5000, { from: accounts[ 0 ] })
       const balanceUnlocked = await token.balanceUnlocked.call(accounts[ 0 ])
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("after successful token.transfer(...); time is " + timestamp.toString())
+      }
 
       let threw2 = false
       try {
@@ -523,15 +639,48 @@ contract("OpenDeFiGovernance", function (accounts) {
       } catch (e) {
         threw2 = true
       }
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("after failed(?) token.transfer(...); time is " + timestamp.toString())
+      }
+
       assert.equal(threw2, true, "was able to send a locked token")    
     })
 
     it('Locking: expired timelocks can be cleared', async () => {
       await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
 
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("lock created at block.timestamp " + timestamp.toString() + " according to contract " + lockTime.toString())
+      }
+
       await helper.advanceTimeAndBlock(10000)
 
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("advanced time by 10000; testing token.clearLock() at time " + timestamp.toString())
+      }
+
       await token.clearLock()
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("after token.clearLock(); time is " + timestamp.toString())
+      }
 
       const lockedAmount = await token.baseTokensLocked.call(accounts[ 0 ])
       assert.strictEqual(lockedAmount.toNumber(), 0)
@@ -565,13 +714,46 @@ contract("OpenDeFiGovernance", function (accounts) {
     it('Locking: reduce tokens unlocked each epoch by amount', async () => {
       await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
 
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("lock created at block.timestamp " + timestamp.toString() + " according to contract " + lockTime.toString())
+      }
+
       await helper.advanceTimeAndBlock(1000)
 
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("advanced time by 1000; will call decreaseUnlockAmount(499) next " + timestamp.toString())
+      }
+
       await token.decreaseUnlockAmount(499)
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("time after decreaseUnlockAmount(499) " + timestamp.toString())
+      }
       
       await helper.advanceTimeAndBlock(1000)
 
       const balanceUnlocked = await token.balanceUnlocked.call(accounts[ 0 ])
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("advanced time by 10000; testing token.balanceUnlocked() at time " + timestamp.toString())
+      }
+
       assert.strictEqual(balanceUnlocked.toNumber(), 5501)
 
     })
@@ -624,18 +806,60 @@ contract("OpenDeFiGovernance", function (accounts) {
     it('Locking: token unlock period can be increased', async () => {
       await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
 
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("lock created at block.timestamp " + timestamp.toString() + " according to contract " + lockTime.toString())
+      }
+
       await helper.advanceTimeAndBlock(1000)
 
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("advanced time by 1000; will call increaseUnlockTime(1000) next " + timestamp.toString())
+      }
+
       await token.increaseUnlockTime(1000)
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("time after increaseUnlockTime(1000) " + timestamp.toString())
+      }
       
       await helper.advanceTimeAndBlock(1000)
 
       const balanceUnlocked = await token.balanceUnlocked.call(accounts[ 0 ])
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("advanced time by 1000; testing balanceUnlocked " + timestamp.toString())
+      }
+
       assert.strictEqual(balanceUnlocked.toNumber(), 5750, "time interval doubled, half the tokens should have unlocked this epoch")
 
       await helper.advanceTimeAndBlock(1000)
 
       const balanceUnlocked2 = await token.balanceUnlocked.call(accounts[ 0 ])
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("advanced time by 1000; testing balanceUnlocked " + timestamp.toString())
+      }
+
       assert.strictEqual(balanceUnlocked2.toNumber(), 6000)
     })
 
@@ -672,9 +896,33 @@ contract("OpenDeFiGovernance", function (accounts) {
     it('Locking: lock up more tokens by specified addedValue', async () => {
       await token.newTokenLock('5000', 1000, 500, { from: accounts[ 0 ] })
 
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("lock created at block.timestamp " + timestamp.toString() + " according to contract " + lockTime.toString())
+      }
+
       await helper.advanceTimeAndBlock(1000)
 
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("advanced time by 1000; will call increaseTokensLocked(1000) next " + timestamp.toString())
+      }
+
       await token.increaseTokensLocked(1000)
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("time after increaseTokensLocked(1000), testing token.balanceUnlocked() " + timestamp.toString())
+      }
 
       const balanceUnlocked = await token.balanceUnlocked.call(accounts[ 0 ])
       assert.strictEqual(balanceUnlocked.toNumber(), 4500)
@@ -682,6 +930,15 @@ contract("OpenDeFiGovernance", function (accounts) {
       await helper.advanceTimeAndBlock(1000)
 
       const balanceUnlocked1 = await token.balanceUnlocked.call(accounts[ 0 ])
+
+      if(verbose){
+        blockNum = await web3.eth.getBlockNumber()
+        block = await web3.eth.getBlock(blockNum)
+        const timestamp = block.timestamp
+        const lockTime = await token.lockTime.call(accounts[ 0 ])
+        console.log("advanced time by 1000; testing balanceUnlocked " + timestamp.toString())
+      }
+
       assert.strictEqual(balanceUnlocked1.toNumber(), 5000)
 
     })
