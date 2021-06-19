@@ -1,4 +1,4 @@
-const OpenDeFiGovernance = artifacts.require("OpenDeFiGovernance");
+const FyfyGovernanceToken = artifacts.require("FyfyGovernanceToken");
 
 //https://github.com/ejwessel/GanacheTimeTraveler
 const helper = require('./utils.js');
@@ -11,13 +11,13 @@ const verbose = false
  * Ethereum client
  * See docs: https://www.trufflesuite.com/docs/truffle/testing/writing-tests-in-javascript
  */
-contract("OpenDeFiGovernance", function (accounts) {
+contract("FyfyGovernanceToken", function (accounts) {
     //const wallet = accounts[0]
     // const walletTo = accounts[1]
     let token //: Contract;
-    const tokenName = "OpenDeFiGovernanceTestingToken";
-    const tokenSymbol = 'ODGTT'
-    //const tokenDecimals = 1
+    const tokenName = "FyfyGovernanceTestingToken";
+    const tokenSymbol = 'FGTT'
+    //const tokenDecimals = 10
   beforeEach(async() => {
       snapShot = await helper.takeSnapshot();
       snapshotId = snapShot['result'];
@@ -27,7 +27,7 @@ contract("OpenDeFiGovernance", function (accounts) {
       await helper.revertToSnapshot(snapshotId);
   });
     beforeEach(async () => {
-        token = await OpenDeFiGovernance.new(tokenName, "ODGTT", initial_tokens, accounts[0]);
+        token = await FyfyGovernanceToken.new(tokenName, "FGTT", initial_tokens, accounts[0]);
         // console.log(token.address)
     });
 
@@ -80,10 +80,10 @@ contract("OpenDeFiGovernance", function (accounts) {
 
     })
   
-    it('transfers: should fail when trying to transfer 10001 to accounts[1] with accounts[0] having 10000', async () => {
+    it('transfers: should fail when trying to transfer 100001 to accounts[1] with accounts[0] having 10000', async () => {
       let threw = false
       try {
-        await token.transfer.call(accounts[ 1 ], 10001, { from: accounts[ 0 ] })
+        await token.transfer.call(accounts[ 1 ], 100001, { from: accounts[ 0 ] })
       } catch (e) {
         threw = true
       }

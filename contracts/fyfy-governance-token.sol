@@ -3,7 +3,7 @@
 //https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/math/SafeMath.sol
 
 /**
-Copyright 2021 Open DeFi DAO
+Copyright 2021 FYFY.IO
 
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
@@ -16,23 +16,23 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 pragma solidity ^0.8.4;
 
 /**
-* @dev Inteface for the token lock features in this contract
+* @dev Inteface for the Fyfy token lock features in this contract
 */
 interface ITOKENLOCK {
     /**
-     * @dev Emitted when the token lock is initialized  
+     * @dev Emitted when the Fyfy token lock is initialized  
      * `tokenHolder` is the address the lock pertains to
      *  `amountLocked` is the amount of tokens locked 
      *  `time` is the (initial) time at which tokens were locked
      *  `unlockPeriod` is the time interval at which tokens become unlockedPerPeriod
-     *  `unlockedPerPeriod` is the amount of token unlocked earch unlockPeriod
+     *  `unlockedPerPeriod` is the amount of Fyfy token unlocked earch unlockPeriod
      */
     event  NewTokenLock(address tokenHolder, uint256 amountLocked, uint256 time, uint256 unlockPeriod, uint256 unlockedPerPeriod);
     /**
      * @dev Emitted when the token lock is updated  to be more strict
      * `tokenHolder` is the address the lock pertains to
-     *  `amountLocked` is the amount of tokens locked 
-     *  `time` is the (initial) time at which tokens were locked
+     *  `amountLocked` is the amount of Fyfy tokens locked 
+     *  `time` is the (initial) time at which Fyfy tokens were locked
      *  `unlockPeriod` is the time interval at which tokens become unlockedPerPeriod
      *  `unlockedPerPeriod` is the amount of token unlocked earch unlockPeriod
      */
@@ -42,7 +42,7 @@ interface ITOKENLOCK {
      * @dev Lock `baseTokensLocked_` held by the caller with `unlockedPerEpoch_` tokens unlocking each `unlockEpoch_`
      *
      *
-     * Emits an {NewTokenLock} event indicating the updated terms of the token lockup.
+     * Emits an {NewTokenLock} event indicating the updated terms of the Fyfy token lockup.
      *
      * Requires msg.sender to:
      *
@@ -60,23 +60,23 @@ interface ITOKENLOCK {
      *
      * Requirements:
      *
-     * - msg.sender must not have any tokens locked, currently
+     * - msg.sender must not have any Fyfy tokens locked, currently
      */
     function clearLock() external;
     
     /**
-     * @dev Returns the amount of tokens that are unlocked i.e. transferrable by `who`
+     * @dev Returns the amount of Fyfy tokens that are unlocked i.e. transferrable by `who`
      *
      */
     function balanceUnlocked(address who) external view returns (uint256 amount);
     /**
-     * @dev Returns the amount of tokens that are locked and not transferrable by `who`
+     * @dev Returns the amount of Fyfy tokens that are locked and not transferrable by `who`
      *
      */
     function balanceLocked(address who) external view returns (uint256 amount);
 
     /**
-     * @dev Reduce the amount of token unlocked each period by `subtractedValue`
+     * @dev Reduce the amount of Fyfy token unlocked each period by `subtractedValue`
      * 
      * Emits an {UpdateTokenLock} event indicating the updated terms of the token lockup.
      * 
@@ -89,13 +89,13 @@ interface ITOKENLOCK {
      */
     function decreaseUnlockAmount(uint256 subtractedValue) external;
     /**
-     * @dev Increase the duration of the period at which tokens are unlocked by `addedValue`
-     * this will have the net effect of slowing the rate at which tokens are unlocked
+     * @dev Increase the duration of the period at which Fyfy tokens are unlocked by `addedValue`
+     * this will have the net effect of slowing the rate at which Fyfy tokens are unlocked
      * 
-     * Emits an {UpdateTokenLock} event indicating the updated terms of the token lockup.
+     * Emits an {UpdateTokenLock} event indicating the updated terms of the Fyfy token lockup.
      * 
      * Requires: 
-     *  - msg.sender must have tokens currently locked
+     *  - msg.sender must have Fyfy tokens currently locked
      *  - `addedValue` is greater than 0
      * 
      *  NOTE: As a side effect resets the baseTokensLocked and lockTime for msg.sender 
@@ -109,9 +109,9 @@ interface ITOKENLOCK {
      * Emits an {UpdateTokenLock} event indicating the updated terms of the token lockup.
      * 
      * Requires: 
-     *  - msg.sender must have tokens currently locked
+     *  - msg.sender must have Fyfy tokens currently locked
      *  - `addedValue` is greater than zero
-     *  - msg.sender must have sufficient unlocked tokens to lock
+     *  - msg.sender must have sufficient unlocked Fyfy tokens to lock
      * 
      *  NOTE: As a side effect resets the baseTokensLocked and lockTime for msg.sender 
      *
@@ -124,7 +124,7 @@ interface ITOKENLOCK {
  */
 interface IERC20 {
     /**
-     * @dev Returns the amount of tokens in existence.
+     * @dev Returns the amount of Fyfy tokens in existence.
      */
     function totalSupply() external view returns (uint256);
 
@@ -134,7 +134,7 @@ interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
 
     /**
-     * @dev Moves `amount` tokens from the caller's account to `recipient`.
+     * @dev Moves `amount` Fyfy tokens from the caller's account to `recipient`.
      *
      * Returns a boolean value indicating whether the operation succeeded.
      *
@@ -143,7 +143,7 @@ interface IERC20 {
     function transfer(address recipient, uint256 amount) external returns (bool);
 
     /**
-     * @dev Returns the remaining number of tokens that `spender` will be
+     * @dev Returns the remaining number of Fyfy tokens that `spender` will be
      * allowed to spend on behalf of `owner` through {transferFrom}. This is
      * zero by default.
      *
@@ -200,17 +200,17 @@ interface IERC20 {
  */
 interface IERC20Metadata is IERC20 {
     /**
-     * @dev Returns the name of the token.
+     * @dev Returns the name of the Fyfy token.
      */
     function name() external view returns (string memory);
 
     /**
-     * @dev Returns the symbol of the token.
+     * @dev Returns the symbol of the Fyfy token.
      */
     function symbol() external view returns (string memory);
 
     /**
-     * @dev Returns the decimals places of the token.
+     * @dev Returns the decimals places of the Fyfy token.
      */
     function decimals() external view returns (uint8);
 }
@@ -235,7 +235,7 @@ abstract contract Context {
 /**
  * @dev Implementation of the {IERC20} interface.
  *
- * This implementation is agnostic to the way tokens are created. This means
+ * This implementation is agnostic to the way Fyfy tokens are created. This means
  * that a supply mechanism has to be added in a derived contract using {_mint}.
  * For a generic mechanism see {ERC20PresetMinterPauser}.
  *
@@ -281,14 +281,14 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     }
 
     /**
-     * @dev Returns the name of the token.
+     * @dev Returns the name of the Fyfy token.
      */
     function name() public view virtual override returns (string memory) {
         return _name;
     }
 
     /**
-     * @dev Returns the symbol of the token, usually a shorter version of the
+     * @dev Returns the symbol of the Fyfy token, usually a shorter version of the
      * name.
      */
     function symbol() public view virtual override returns (string memory) {
@@ -424,7 +424,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
      * @dev Moves tokens `amount` from `sender` to `recipient`.
      *
      * This is internal function is equivalent to {transfer}, and can be used to
-     * e.g. implement automatic token fees, slashing mechanisms, etc.
+     * e.g. implement automatic Fyfy token fees, slashing mechanisms, etc.
      *
      * Emits a {Transfer} event.
      *
@@ -448,7 +448,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
         emit Transfer(sender, recipient, amount);
     }
 
-    /** @dev Creates `amount` tokens and assigns them to `account`, increasing
+    /** @dev Creates `amount` Fyfy tokens and assigns them to `account`, increasing
      * the total supply.
      *
      * Emits a {Transfer} event with `from` set to the zero address.
@@ -490,14 +490,14 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
     }
 
     /**
-     * @dev Hook that is called before any transfer of tokens. This includes
+     * @dev Hook that is called before any transfer of Fyfy tokens. This includes
      * minting and burning.
      *
      * Calling conditions:
      *
      * - when `from` and `to` are both non-zero, `amount` of ``from``'s tokens
      * will be to transferred to `to`.
-     * - when `from` is zero, `amount` tokens will be minted for `to`.
+     * - when `from` is zero, `amount` Fyfy tokens will be minted for `to`.
      * - when `to` is zero, `amount` of ``from``'s tokens will be burned.
      * - `from` and `to` are never both zero.
      *
@@ -507,7 +507,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
 
 }
 
-contract OpenDeFiGovernance is ERC20, ITOKENLOCK {
+contract FyfyGovernanceToken is ERC20, ITOKENLOCK {
 
 
     constructor(string memory name_, string memory symbol_, uint256 amount_, address deployer_) ERC20(name_, symbol_){
@@ -526,12 +526,12 @@ contract OpenDeFiGovernance is ERC20, ITOKENLOCK {
     string private constant ERROR_NO_LOCKED_TOKENS = "No tokens are locked, create new lock first";
     
     
-    mapping (address => uint256) public lockTime; //the time tokens were locked
-    mapping (address => uint256) public unlockEpoch; //the time interval at which tokens unlock
-    mapping (address => uint256) public unlockedPerEpoch; // the number of tokens unlocked per unlockEpoch
-    mapping (address => uint256) public baseTokensLocked; // the number of tokens locked up by HOLDER
+    mapping (address => uint256) public lockTime; //the time Fyfy tokens were locked
+    mapping (address => uint256) public unlockEpoch; //the time interval at which Fyfy tokens unlock
+    mapping (address => uint256) public unlockedPerEpoch; // the number of Fyfy tokens unlocked per unlockEpoch
+    mapping (address => uint256) public baseTokensLocked; // the number of Fyfy tokens locked up by HOLDER
     /**
-     * @dev require that at least `amount` tokens are unlocked before transfer is possible
+     * @dev require that at least `amount` Fyfy tokens are unlocked before transfer is possible
      *  also permit if minting tokens (coming from 0x0)
      *
     */
@@ -540,17 +540,17 @@ contract OpenDeFiGovernance is ERC20, ITOKENLOCK {
     }
     
     /**
-     * @dev Lock `baseTokensLocked_` held by the caller with `unlockedPerEpoch_` tokens unlocking each `unlockEpoch_`
+     * @dev Lock `baseTokensLocked_` held by the caller with `unlockedPerEpoch_` Fyfy tokens unlocking each `unlockEpoch_`
      *
      *
-     * Emits an {NewTokenLock} event indicating the updated terms of the token lockup.
+     * Emits an {NewTokenLock} event indicating the updated terms of the Fyfy token lockup.
      *
      * Requires msg.sender to:
      *
      * - Must not be a prevoius lock for this address. If so, it must be first cleared with a call to {clearLock}.
      * - Must have at least a balance of `baseTokensLocked_` to lock
      * - Must provide non-zero `unlockEpoch_`
-     * - Must have at least `unlockedPerEpoch_` tokens to unlock 
+     * - Must have at least `unlockedPerEpoch_` Fyfy tokens to unlock 
      *  - `unlockedPerEpoch_` must be greater than zero
      */
     
@@ -571,7 +571,7 @@ contract OpenDeFiGovernance is ERC20, ITOKENLOCK {
      *
      * Requirements:
      *
-     * - msg.sender must not have any tokens locked, currently
+     * - msg.sender must not have any Fyfy tokens locked, currently
      */
     function clearLock() public virtual override{
         require(balanceLocked(msg.sender) == 0, ERROR_CLEARING_LOCK);
@@ -582,7 +582,7 @@ contract OpenDeFiGovernance is ERC20, ITOKENLOCK {
     }
     
     /**
-     * @dev Returns the amount of tokens that are unlocked i.e. transferrable by `who`
+     * @dev Returns the amount of Fyfy tokens that are unlocked i.e. transferrable by `who`
      *
      */
     function balanceUnlocked(address who) public virtual override view returns (uint256 amount) {
@@ -591,7 +591,7 @@ contract OpenDeFiGovernance is ERC20, ITOKENLOCK {
         
     }
     /**
-     * @dev Returns the amount of tokens that are locked and not transferrable by `who`
+     * @dev Returns the amount of Fyfy tokens that are locked and not transferrable by `who`
      *
      */
     function balanceLocked(address who) public virtual override view returns (uint256 amount){
@@ -616,12 +616,12 @@ contract OpenDeFiGovernance is ERC20, ITOKENLOCK {
  
 
     /**
-     * @dev Reduce the amount of token unlocked each period by `subtractedValue`
+     * @dev Reduce the amount of Fyfy token unlocked each period by `subtractedValue`
      * 
-     * Emits an {UpdateTokenLock} event indicating the updated terms of the token lockup.
+     * Emits an {UpdateTokenLock} event indicating the updated terms of the Fyfy token lockup.
      * 
      * Requires: 
-     *  - msg.sender must have tokens currently locked
+     *  - msg.sender must have Fyfy tokens currently locked
      *  - `subtractedValue` is greater than 0
      *  - cannot reduce the unlockedPerEpoch to 0
      *
@@ -639,13 +639,13 @@ contract OpenDeFiGovernance is ERC20, ITOKENLOCK {
     
     }
     /**
-     * @dev Increase the duration of the period at which tokens are unlocked by `addedValue`
-     * this will have the net effect of slowing the rate at which tokens are unlocked
+     * @dev Increase the duration of the period at which Fyfy tokens are unlocked by `addedValue`
+     * this will have the net effect of slowing the rate at which Fyfy tokens are unlocked
      * 
-     * Emits an {UpdateTokenLock} event indicating the updated terms of the token lockup.
+     * Emits an {UpdateTokenLock} event indicating the updated terms of the Fyfy token lockup.
      * 
      * Requires: 
-     *  - msg.sender must have tokens currently locked
+     *  - msg.sender must have Fyfy tokens currently locked
      *  - `addedValue` is greater than 0
      * 
      *  NOTE: As a side effect resets the baseTokensLocked and lockTime for msg.sender 
@@ -663,16 +663,16 @@ contract OpenDeFiGovernance is ERC20, ITOKENLOCK {
     
     }
     /**
-     * @dev Increase the number of tokens locked by `addedValue`
+     * @dev Increase the number of Fyfy tokens locked by `addedValue`
      * i.e. locks up more tokens.
      * 
      *      
-     * Emits an {UpdateTokenLock} event indicating the updated terms of the token lockup.
+     * Emits an {UpdateTokenLock} event indicating the updated terms of the Fyfy token lockup.
      * 
      * Requires: 
-     *  - msg.sender must have tokens currently locked
+     *  - msg.sender must have Fyfy tokens currently locked
      *  - `addedValue` is greater than zero
-     *  - msg.sender must have sufficient unlocked tokens to lock
+     *  - msg.sender must have sufficient unlocked Fyfy tokens to lock
      * 
      *  NOTE: As a side effect resets the baseTokensLocked and lockTime for msg.sender 
      *
